@@ -39,7 +39,7 @@ on:
       BUILD_TARGET:
         description: 'Specify your Build Target'
         required: true
-        default: 'boot'
+        default: 'vendorboot'
         type: choice
         options:
         - boot
@@ -113,6 +113,7 @@ jobs:
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
         git clone ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} ./kernel/xiaomi/lisa --depth=1
+        sed -i 's|BOARD_BOOT_HEADER_VERSION := 3|BOARD_BOOT_HEADER_VERSION := 4|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
         sed -i 's|TARGET_KERNEL_SOURCE := kernel/xiaomi/sm8350|TARGET_KERNEL_SOURCE := kernel/xiaomi/lisa|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
         sed -i 's|TARGET_KERNEL_CONFIG := vendor/lahaina-qgki_defconfig vendor/debugfs.config vendor/xiaomi_QGKI.config vendor/lisa_QGKI.config|TARGET_KERNEL_CONFIG := lisa_defconfig|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
 
