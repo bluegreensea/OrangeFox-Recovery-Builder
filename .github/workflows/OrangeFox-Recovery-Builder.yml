@@ -113,9 +113,9 @@ jobs:
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
         git clone ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} ./kernel/xiaomi/lisa --depth=1
-        sed -i 's|BOARD_BOOT_HEADER_VERSION := 3|BOARD_BOOT_HEADER_VERSION := 4|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
         sed -i 's|TARGET_KERNEL_SOURCE := kernel/xiaomi/sm8350|TARGET_KERNEL_SOURCE := kernel/xiaomi/lisa|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
-        sed -i 's|TARGET_KERNEL_CONFIG := vendor/lahaina-qgki_defconfig vendor/debugfs.config vendor/xiaomi_QGKI.config vendor/lisa_QGKI.config|TARGET_KERNEL_CONFIG := lisa_defconfig|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
+        cd ./kernel/xiaomi/lisa
+        echo "KERNEL_COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Check Manifest Branch
       uses: haya14busa/action-cond@v1
@@ -142,6 +142,11 @@ jobs:
           DEVICE_TREE_URL="${DEVICE_TREE_URL%.git}"
         fi
         echo "DEVICE_TREE_URL=${DEVICE_TREE_URL}" >> $GITHUB_ENV
+        KERNEL_TREE_URL="${{ github.event.inputs.KERNEL_TREE }}"
+        if [[ "${KERNEL_TREE_URL}" == *.git ]]; then
+          KERNEL_TREE_URL="${KERNEL_TREE_URL%.git}"
+        fi
+        echo "KERNEL_TREE_URL=${KERNEL_TREE_URL}" >> $GITHUB_ENV
 
     - name: Check if Recovery Exist
       run: |
@@ -203,6 +208,8 @@ jobs:
           Build: ${{ github.event.inputs.MANIFEST_BRANCH }}
           Device: [Device Tree/Branch](${{ github.event.inputs.DEVICE_TREE }}/tree/${{ github.event.inputs.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ github.event.inputs.DEVICE_TREE }}/commit/${{ env.COMMIT_ID }}) during building.
+          Kernel: [Kernel Tree/Branch](${{ github.event.inputs.KERNEL_TREE }}/tree/${{ github.event.inputs.KERNEL_TREE_BRANCH }})
+          Commit: Most recent [commit](${{ github.event.inputs.KERNEL_TREE }}/commit/${{ env.KERNEL_COMMIT_ID }}) during building.
           
     - name: Release ramdisk-recovery
       if: env.CHECK_IMG_IS_OK == 'true'
@@ -218,6 +225,8 @@ jobs:
           Build: ${{ github.event.inputs.MANIFEST_BRANCH }}
           Device: [Device Tree/Branch](${{ env.DEVICE_TREE_URL }}/tree/${{ inputs.DEVICE_TREE_BRANCH }})
           Commit: Most recent [commit](${{ env.DEVICE_TREE_URL }}/commit/${{ env.COMMIT_ID }}) during building.
+          Kernel: [Kernel Tree/Branch](${{ env.KERNEL_TREE_URL }}/tree/${{ inputs.KERNEL_TREE_BRANCH }})
+          Commit: Most recent [commit](${{ env.KERNEL_TREE_URL }}/commit/${{ env.KERNEL_COMMIT_ID }}) during building.
           MD5 (img): ${{ env.MD5_IMG }}
           
     - name: Run LDCheck
