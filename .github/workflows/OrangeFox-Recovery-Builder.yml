@@ -17,7 +17,7 @@ on:
         required: true
         default: 'https://github.com/NSR-Resources/android_device_xiaomi_lisa_aosp-ofox.git'
       DEVICE_TREE_BRANCH:
-        description: 'Custom Recovery Tree Branch'
+        description: 'Custom Recovery Tree Branch or Commit'
         required: true
         default: 'fox_12.1'
       DEVICE_PATH:
@@ -32,6 +32,10 @@ on:
         description: 'Custom Kernel Tree Branch or Commit'
         required: true
         default: 'lineage-23.0'
+      KERNEL_PATH:
+        description: 'Specify your kernel path.'
+        required: true
+        default: 'kernel/xiaomi/lisa'
       DEVICE_NAME:
         description: 'Specify your Device Codename.'
         required: true
@@ -45,10 +49,6 @@ on:
         - boot
         - recovery
         - vendorboot
-      LDCHECK:
-        description: 'Path of blobs to check' 
-        required: true
-        default: 'system/bin/qseecomd'
       RECOVERY_INSTALLER:
         description: 'Include recovery installer zip'
         type: boolean
@@ -105,20 +105,23 @@ jobs:
     - name: Clone Device Tree
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        git clone ${{ github.event.inputs.DEVICE_TREE }} -b ${{ github.event.inputs.DEVICE_TREE_BRANCH }} ./${{ github.event.inputs.DEVICE_PATH }}
+        mkdir -p ./${{ github.event.inputs.DEVICE_PATH }}
         cd ${{ github.event.inputs.DEVICE_PATH }}
+        git init
+        git remote add origin ${{ github.event.inputs.DEVICE_TREE }}
+        git fetch --depth 1 origin ${{ github.event.inputs.DEVICE_TREE_BRANCH }}
+        git reset --hard FETCH_HEAD
         echo "COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Clone Kernel Tree & Patch Device Tree
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        mkdir -p ./kernel/xiaomi/lisa
-        cd ./kernel/xiaomi/lisa
+        mkdir -p ./${{ github.event.inputs.KERNEL_PATH }}
+        cd ${{ github.event.inputs.KERNEL_PATH }}
         git init
         git remote add origin ${{ github.event.inputs.KERNEL_TREE }}
         git fetch --depth 1 origin ${{ github.event.inputs.KERNEL_TREE_BRANCH }}
         git reset --hard FETCH_HEAD
-        sed -i 's|TARGET_KERNEL_SOURCE := kernel/xiaomi/sm8350|TARGET_KERNEL_SOURCE := kernel/xiaomi/lisa|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
         echo "KERNEL_COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Check Manifest Branch
@@ -239,6 +242,6 @@ jobs:
         mv -n libneeds ${{ env.FILE_PATH }}/recovery/root/
         mv -n ldcheck ${{ env.FILE_PATH }}/recovery/root/
         cd ${{ env.FILE_PATH }}/recovery/root/
-        python3 ldcheck -p system/lib64:vendor/lib64:system/lib:vendor/lib -d ${{ github.event.inputs.LDCHECK }}
+        python3 ldcheck -p system/lib64:vendor/lib64:system/lib:vendor/lib -d system/bin/qseecomd
         echo "Done checking missing dependencies. Review, and reconfigure your tree."
       continue-on-error: true
