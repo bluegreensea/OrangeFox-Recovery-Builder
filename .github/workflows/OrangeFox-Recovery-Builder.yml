@@ -19,7 +19,7 @@ on:
       DEVICE_TREE_BRANCH:
         description: 'Custom Recovery Tree Branch'
         required: true
-        default: 'A15'
+        default: 'fox_12.1'
       DEVICE_PATH:
         description: 'Specify your device path.'
         required: true
@@ -29,7 +29,7 @@ on:
         required: true
         default: 'https://github.com/NSR-Resources/android_kernel_xiaomi_lisa.git'
       KERNEL_TREE_BRANCH:
-        description: 'Custom Kernel Tree Branch'
+        description: 'Custom Kernel Tree Branch or Commit'
         required: true
         default: 'lineage-23.0'
       DEVICE_NAME:
@@ -112,9 +112,13 @@ jobs:
     - name: Clone Kernel Tree & Patch Device Tree
       run: |
         cd ${GITHUB_WORKSPACE}/OrangeFox/fox_${{ github.event.inputs.MANIFEST_BRANCH }}
-        git clone ${{ github.event.inputs.KERNEL_TREE }} -b ${{ github.event.inputs.KERNEL_TREE_BRANCH }} ./kernel/xiaomi/lisa --depth=1
-        sed -i 's|TARGET_KERNEL_SOURCE := kernel/xiaomi/sm8350|TARGET_KERNEL_SOURCE := kernel/xiaomi/lisa|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
+        mkdir -p ./kernel/xiaomi/lisa
         cd ./kernel/xiaomi/lisa
+        git init
+        git remote add origin ${{ github.event.inputs.KERNEL_TREE }}
+        git fetch --depth 1 origin ${{ github.event.inputs.KERNEL_TREE_BRANCH }}
+        git reset --hard FETCH_HEAD
+        sed -i 's|TARGET_KERNEL_SOURCE := kernel/xiaomi/sm8350|TARGET_KERNEL_SOURCE := kernel/xiaomi/lisa|' ./${{ github.event.inputs.DEVICE_PATH }}/BoardConfig.mk
         echo "KERNEL_COMMIT_ID=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Check Manifest Branch
